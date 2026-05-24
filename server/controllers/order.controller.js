@@ -2,7 +2,7 @@
 const Order   = require('../models/Order.model');
 const Listing = require('../models/Listing.model');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
-
+const { getIO } = require('../socket/socket');
 // ─────────────────────────────────────────────────────────────────────
 // @desc    Create a new order (buyer books a listing)
 // @route   POST /api/orders
@@ -89,6 +89,21 @@ const createOrder = async (req, res, next) => {
     await order.populate('buyer', 'name email avatar');
     await order.populate('farmer', 'name email avatar phone');
     await order.populate('listing', 'title images estimatedAvailableDate');
+
+    // ── Notify farmer in real-time ────────────────────────────────────
+    try {
+      const io = getIO();
+      io.to(listing.farmer.toString()).emit('new_notification', {
+        type:    'new_order',
+        title:   'New order received',
+        message: `${req.user.name} ordered ${parsedQty} ${listing.unit} of "${listing.title}"`,
+        orderId: order._id,
+        time:    new Date(),
+      });
+    } catch (e) {
+      // Socket notification failure should never break the order flow
+      console.error('Socket notification error:', e.message);
+    }
 
     return successResponse(res, 201, 'Order placed successfully', { order });
   } catch (error) {
@@ -255,10 +270,36 @@ const cancelOrder = async (req, res, next) => {
   }
 };
 
+// ─────────────────────────────────────────────────────────────────────
+// @desc    Get all incoming orders for farmer's listings
+// @route   GET /api/orders/farmer/incoming
+// @access  Private (Farmer only)
+// ─────────────────────────────────────────────────────────────────────
+const getIncomingOrders = async (req, res, next) => {
+  try {
+    const { status } = req.query;
+    const filter = { farmer: req.user._id };
+    if (status) filter.status = status;
+
+    const orders = await Order.find(filter)
+      .populate('buyer',   'name email avatar phone')
+      .populate('listing', 'title images unit pricePerUnit estimatedAvailableDate')
+      .sort({ createdAt: -1 });
+
+    return successResponse(res, 200, 'Incoming orders fetched', {
+      orders,
+      count: orders.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createOrder,
   getMyOrders,
   getOrderById,
   updateOrderStatus,
   cancelOrder,
+  getIncomingOrders,
 };

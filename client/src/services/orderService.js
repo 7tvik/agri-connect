@@ -25,3 +25,8 @@ export const cancelOrder = async (id) => {
   const res = await api.patch(`/orders/${id}/cancel`);
   return res.data;
 };
+
+export const getIncomingOrders = async (params = {}) => {
+  const res = await api.get('/orders/farmer/incoming', { params });
+  return res.data;
+};

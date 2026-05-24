@@ -3,7 +3,7 @@ const express = require('express');
 const router  = express.Router();
 const {
   createOrder, getMyOrders, getOrderById,
-  updateOrderStatus, cancelOrder,
+  updateOrderStatus, cancelOrder, getIncomingOrders,
 } = require('../controllers/order.controller');
 const { protect }        = require('../middleware/auth.middleware');
 const { authorizeRoles } = require('../middleware/role.middleware');
@@ -17,5 +17,12 @@ router.get('/:id',                            getOrderById);  // single order de
 
 router.patch('/:id/status', authorizeRoles('farmer'), updateOrderStatus); // farmer updates status
 router.patch('/:id/cancel', authorizeRoles('buyer'),  cancelOrder);       // buyer cancels
+
+// Farmer sees all incoming orders for their listings
+router.get(
+  '/farmer/incoming',
+  authorizeRoles('farmer'),
+  getIncomingOrders
+);
 
 module.exports = router;

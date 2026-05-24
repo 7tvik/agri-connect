@@ -11,6 +11,9 @@ import OrderTimeline from '../components/orders/OrderTimeline';
 import PageLoader from '../components/common/PageLoader';
 import EmptyState from '../components/common/EmptyState';
 import { LogOut, MapPin, MessageCircle, Star, X, Eye } from 'lucide-react';
+import NotificationBell from '../components/common/NotificationBell';
+import useSocket from '../hooks/useSocket';
+
 
 // ── Reusable status pill ──────────────────────────────────────────────
 // One single component — consistent everywhere in the app
@@ -47,6 +50,7 @@ const BuyerDashboard = () => {
   const queryClient      = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('');
   const [expandedId,   setExpandedId]   = useState(null);
+  const { socket } = useSocket();
 
   // All orders — for accurate stats always
   const { data: allData } = useQuery({
@@ -105,9 +109,14 @@ const BuyerDashboard = () => {
             <Link to="/listings" className="text-xs md:text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-black bg-white hover:bg-grey hover:text-black transition-colors">
               Browse listings
             </Link>
+            <Link to="/chat" className="text-xs md:text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+              <MessageCircle size={13} />
+              Messages
+            </Link>
             <span className="text-sm text-gray-400 hidden md:inline">
               {user?.name}
             </span>
+            <NotificationBell socket={socket} />
             <button
               onClick={() => handleLogout()}
               className="flex items-center gap-1.5 text-xs text-white bg-black hover:bg-gray-900 px-3 py-2 rounded-lg transition-colors"
@@ -255,7 +264,11 @@ const BuyerDashboard = () => {
                           </button>
 
                           {/* Message farmer */}
-                          <button className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100 transition-all">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/chat?userId=${order.farmer?._id}&name=${encodeURIComponent(order.farmer?.name || '')}&role=farmer`)}
+                            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100 transition-all"
+                          >
                             <MessageCircle size={12} />
                             Message farmer
                           </button>

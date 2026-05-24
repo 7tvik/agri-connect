@@ -88,6 +88,14 @@ const initSocket = (server) => {
         // Send to receiver's personal room (delivers even if they're
         // on a different page — they'll get it when they open chat)
         io.to(receiverId).emit('receive_message', message);
+        // Also send a notification event (for the bell badge)
+        io.to(receiverId).emit('new_notification', {
+        type:    'new_message',
+        title:   'New message',
+        message: `${socket.user.name}: ${content.trim().slice(0, 60)}`,
+        fromId:  userId,
+        time:    new Date(),
+        });
 
         // Send back to sender as confirmation
         socket.emit('message_sent', message);

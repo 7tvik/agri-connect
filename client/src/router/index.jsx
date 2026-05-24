@@ -9,6 +9,7 @@ import FarmerDashboard from '../pages/FarmerDashboard';
 import BuyerDashboard  from '../pages/BuyerDashboard';
 import ListingsPage    from '../pages/ListingsPage';
 import ListingDetail   from '../pages/ListingDetail';
+import ChatPage        from '../pages/ChatPage';
 
 // Home page
 const Home = () => {
@@ -58,6 +59,7 @@ const AppRouter = () => (
     <Route path="/login"     element={<PublicRoute><Login /></PublicRoute>} />
     <Route path="/register"  element={<PublicRoute><Register /></PublicRoute>} />
     <Route path="/oauth-success" element={<OAuthSuccess />} />
+    <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
 
     {/* Farmer protected */}
     <Route path="/farmer/dashboard" element={
@@ -72,7 +74,13 @@ const AppRouter = () => (
         <BuyerDashboard />
       </ProtectedRoute>
     } />
-
+    
+    {/* Chat — both farmer and buyer */}
+    <Route path="/chat" element={
+      <ProtectedRoute>
+        <ChatPage />
+      </ProtectedRoute>
+    } />
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
 );
