@@ -197,7 +197,7 @@ const BuyerDashboard = () => {
             {orders.map((order) => (
               <div
                 key={order._id}
-                className="bg-white border border-gray-100 rounded-xl overflow-hidden"
+                className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm"
               >
                 {/* Order row */}
                 <div className="p-4 md:p-5">

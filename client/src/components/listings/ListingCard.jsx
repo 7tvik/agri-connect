@@ -13,7 +13,7 @@ const ListingCard = ({ listing }) => {
   return (
     <Link
       to={`/listings/${_id}`}
-      className="block bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden group"
+      className="block bg-white rounded-xl border border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group"
     >
       {/* Image */}
       <div className="relative h-48 bg-gray-100 overflow-hidden">

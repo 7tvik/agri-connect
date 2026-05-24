@@ -61,8 +61,12 @@ app.use('/api/listings', require('./routes/listing.routes'));
 
 app.use('/api/auth',     require('./routes/auth.routes'));
 app.use('/api/listings', require('./routes/listing.routes'));
-app.use('/api/orders',   require('./routes/order.routes')); // ← ADD THIS
+app.use('/api/orders',   require('./routes/order.routes')); 
 
+app.use('/api/auth',     require('./routes/auth.routes'));
+app.use('/api/listings', require('./routes/listing.routes'));
+app.use('/api/orders',   require('./routes/order.routes'));
+app.use('/api/chat',     require('./routes/chat.routes')); 
 // ── 404 handler ───────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
