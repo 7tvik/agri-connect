@@ -81,7 +81,12 @@ const ChatPage = () => {
             <div className="flex-1 overflow-y-auto">
               <ConversationList
                 selectedUserId={selectedUser?._id}
-                onSelect={setSelectedUser}
+                onClick={() => onSelect({
+                  _id:    conv.other?._id?.toString(), // always string
+                  name:   conv.other?.name,
+                  avatar: conv.other?.avatar,
+                  role:   conv.other?.role,
+                })}
                 isOnline={isUserOnline}
               />
             </div>

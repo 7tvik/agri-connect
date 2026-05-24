@@ -1,7 +1,7 @@
 // src/components/common/NotificationBell.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, ShoppingBag, MessageCircle, X } from 'lucide-react';
+import { Bell, ShoppingBag, MessageCircle, Package, X } from 'lucide-react';
 import useNotificationStore from '../../store/notificationStore';
 import useSocket from '../../hooks/useSocket';
 import { formatRelativeTime } from '../../utils/helpers';
@@ -45,19 +45,22 @@ const NotificationBell = ({ socket: socketProp }) => {
   };
 
   const handleNotificationClick = (notification) => {
-    setIsOpen(false);
-    if (notification.type === 'new_order' && notification.orderId) {
-      navigate('/farmer/dashboard?tab=orders');
-    } else if (notification.type === 'new_message' && notification.fromId) {
-      navigate(`/chat?userId=${notification.fromId}`);
-    }
-  };
+  setIsOpen(false);
+  if (notification.type === 'new_order' && notification.orderId) {
+    navigate('/farmer/dashboard?tab=orders');
+  } else if (notification.type === 'order_update' && notification.orderId) {
+    navigate('/buyer/dashboard');               // ← ADD THIS
+  } else if (notification.type === 'new_message' && notification.fromId) {
+    navigate(`/chat?userId=${notification.fromId}`);
+  }
+};
 
   const iconForType = (type) => {
-    if (type === 'new_order')   return <ShoppingBag  size={14} className="text-primary-600" />;
-    if (type === 'new_message') return <MessageCircle size={14} className="text-blue-500"   />;
-    return <Bell size={14} className="text-gray-400" />;
-  };
+  if (type === 'new_order')    return <ShoppingBag  size={14} className="text-primary-600" />;
+  if (type === 'new_message')  return <MessageCircle size={14} className="text-blue-500"  />;
+  if (type === 'order_update') return <Package       size={14} className="text-green-600" />;
+  return <Bell size={14} className="text-gray-400" />;
+};
 
   return (
     <div className="relative" ref={dropdownRef}>

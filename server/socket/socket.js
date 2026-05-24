@@ -70,37 +70,53 @@ const initSocket = (server) => {
 
         if (!receiverId || !content?.trim()) return;
 
-        const conversationId = getConversationId(userId, receiverId);
+        // Convert BOTH to plain strings before ANY comparison or ID generation
+        const senderIdStr   = socket.user._id.toString();
+        const receiverIdStr = receiverId.toString();
 
-        // Save message to MongoDB
+        // Prevent self-messaging
+        if (senderIdStr === receiverIdStr) return;
+
+        // Generate conversationId from plain strings — consistent every time
+        const conversationId = getConversationId(senderIdStr, receiverIdStr);
+
+        // Save to DB
         const message = await Message.create({
           conversationId,
-          sender:   socket.user._id,
-          receiver: receiverId,
-          content:  content.trim(),
+          sender:         socket.user._id,
+          receiver:       receiverIdStr,
+          content:        content.trim(),
           relatedListing: relatedListing || null,
           relatedOrder:   relatedOrder   || null,
         });
 
-        await message.populate('sender',   'name avatar');
-        await message.populate('receiver', 'name avatar');
+        await message.populate('sender',   '_id name avatar');
+        await message.populate('receiver', '_id name avatar');
 
-        // Send to receiver's personal room (delivers even if they're
-        // on a different page — they'll get it when they open chat)
-        io.to(receiverId).emit('receive_message', message);
-        // Also send a notification event (for the bell badge)
-        io.to(receiverId).emit('new_notification', {
-        type:    'new_message',
-        title:   'New message',
-        message: `${socket.user.name}: ${content.trim().slice(0, 60)}`,
-        fromId:  userId,
-        time:    new Date(),
+        // Convert to plain JS object so _id fields are plain strings
+        const messageObj = message.toObject();
+        // Ensure _id fields are strings for frontend comparison
+        messageObj._id              = messageObj._id.toString();
+        messageObj.sender._id       = messageObj.sender._id.toString();
+        messageObj.receiver._id     = messageObj.receiver._id.toString();
+        messageObj.conversationId   = conversationId;
+
+        // Send to receiver's private room
+        io.to(receiverIdStr).emit('receive_message', messageObj);
+
+        // Confirm to sender
+        socket.emit('message_sent', messageObj);
+
+        // Notify receiver
+        notify(receiverIdStr, 'new_notification', {
+          type:    'new_message',
+          title:   'New message 💬',
+          message: `${socket.user.name}: ${content.trim().slice(0, 60)}`,
+          fromId:  senderIdStr,
         });
 
-        // Send back to sender as confirmation
-        socket.emit('message_sent', message);
-
       } catch (err) {
+        console.error('send_message error:', err);
         socket.emit('message_error', { error: 'Failed to send message' });
       }
     });

@@ -2,8 +2,7 @@
 const Order   = require('../models/Order.model');
 const Listing = require('../models/Listing.model');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
-const { getIO } = require('../socket/socket');
-// ─────────────────────────────────────────────────────────────────────
+const notify = require('../utils/notify');// ─────────────────────────────────────────────────────────────────────
 // @desc    Create a new order (buyer books a listing)
 // @route   POST /api/orders
 // @access  Private (Buyer only)
@@ -91,19 +90,21 @@ const createOrder = async (req, res, next) => {
     await order.populate('listing', 'title images estimatedAvailableDate');
 
     // ── Notify farmer in real-time ────────────────────────────────────
-    try {
-      const io = getIO();
-      io.to(listing.farmer.toString()).emit('new_notification', {
-        type:    'new_order',
-        title:   'New order received',
-        message: `${req.user.name} ordered ${parsedQty} ${listing.unit} of "${listing.title}"`,
-        orderId: order._id,
-        time:    new Date(),
-      });
-    } catch (e) {
-      // Socket notification failure should never break the order flow
-      console.error('Socket notification error:', e.message);
-    }
+    // Notify farmer — safe, never throws
+    notify(listing.farmer, 'new_notification', {
+      type:      'new_order',
+      title:     'New order received 🛒',
+      message:   `${req.user.name} ordered ${parsedQty} ${listing.unit} of "${listing.title}"`,
+      orderId:   order._id,
+    });
+
+    // Notify buyer about status change
+    notify(order.buyer, 'new_notification', {
+      type:      'order_update',
+      title:     'Order status updated 📦',
+      message:   `Your order for "${order.snapshot?.title}" is now ${status.replace('_', ' ')}`,
+      orderId:   order._id,
+    });
 
     return successResponse(res, 201, 'Order placed successfully', { order });
   } catch (error) {
@@ -278,8 +279,16 @@ const cancelOrder = async (req, res, next) => {
 const getIncomingOrders = async (req, res, next) => {
   try {
     const { status } = req.query;
+
+    // SECURITY: Always filter by the logged-in farmer's ID
+    // Never trust any ID from query params or body for this
     const filter = { farmer: req.user._id };
-    if (status) filter.status = status;
+
+    // Optional status filter — validate it's a known value
+    const validStatuses = ['pending', 'confirmed', 'harvested', 'in_transit', 'delivered', 'cancelled'];
+    if (status && validStatuses.includes(status)) {
+      filter.status = status;
+    }
 
     const orders = await Order.find(filter)
       .populate('buyer',   'name email avatar phone')

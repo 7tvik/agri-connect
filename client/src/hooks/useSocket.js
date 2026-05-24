@@ -5,56 +5,74 @@ import useAuthStore from '../store/authStore';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
+let globalSocket = null; // singleton — one socket per session
+
 const useSocket = () => {
   const { isAuthenticated } = useAuthStore();
-  const socketRef           = useRef(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [connected,   setConnected]   = useState(false);
 
   useEffect(() => {
-    // Only connect if user is authenticated
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      // Disconnect on logout
+      if (globalSocket) {
+        globalSocket.disconnect();
+        globalSocket = null;
+        setConnected(false);
+      }
+      return;
+    }
 
-    // Create socket connection
-    // withCredentials: true sends the JWT cookie automatically
-    socketRef.current = io(SOCKET_URL, {
+    // Already connected — don't create a second socket
+    if (globalSocket?.connected) return;
+
+    globalSocket = io(SOCKET_URL, {
       withCredentials: true,
-      transports: ['websocket'], // skip long-polling fallback
+      transports: ['websocket'],
+      reconnection:        true,
+      reconnectionAttempts: 5,
+      reconnectionDelay:   1000,
     });
 
-    const socket = socketRef.current;
-
-    socket.on('connect', () => {
-      console.log('Socket connected:', socket.id);
+    globalSocket.on('connect', () => {
+      console.log('✅ Socket connected:', globalSocket.id);
+      setConnected(true);
     });
 
-    socket.on('online_users', (users) => {
-      setOnlineUsers(users);
+    globalSocket.on('disconnect', () => {
+      console.log('❌ Socket disconnected');
+      setConnected(false);
     });
 
-    socket.on('user_online', ({ userId }) => {
+    globalSocket.on('online_users', (users) => {
+      setOnlineUsers(users.map(String));
+    });
+
+    globalSocket.on('user_online', ({ userId }) => {
       setOnlineUsers((prev) =>
-        prev.includes(userId) ? prev : [...prev, userId]
+        prev.includes(userId.toString()) ? prev : [...prev, userId.toString()]
       );
     });
 
-    socket.on('user_offline', ({ userId }) => {
-      setOnlineUsers((prev) => prev.filter((id) => id !== userId));
+    globalSocket.on('user_offline', ({ userId }) => {
+      setOnlineUsers((prev) => prev.filter((id) => id !== userId.toString()));
     });
 
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected');
-    });
-
-    // Cleanup on unmount or logout
     return () => {
-      socket.disconnect();
-      socketRef.current = null;
+      // Don't disconnect on component unmount — keep alive for notifications
+      // Only disconnect on logout (handled above)
     };
   }, [isAuthenticated]);
 
-  const isUserOnline = (userId) => onlineUsers.includes(userId?.toString());
+  const isUserOnline = (userId) =>
+    !!userId && onlineUsers.includes(userId.toString());
 
-  return { socket: socketRef.current, onlineUsers, isUserOnline };
+  return {
+    socket:       globalSocket,
+    onlineUsers,
+    isUserOnline,
+    connected,
+  };
 };
 
 export default useSocket;
